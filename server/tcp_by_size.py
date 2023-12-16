@@ -45,7 +45,6 @@ def send_with_size(sock, bdata, tid="", TCP_DEBUG=False):
         bdata = bdata.encode()
     len_data = len(bdata)
     header_data = str(len(bdata)).zfill(size_header_size - 1) + "~"
-
     bytea = bytearray(header_data, encoding="utf8") + bdata
 
     sock.send(bytea)

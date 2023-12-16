@@ -90,11 +90,11 @@ def handle_dir(args: str) -> HANDLE_TYPE:
     # params = args.split("~")[1:]
     try:
         data = traverse("." if args == "" else args)  # params[0])
-        return "DIRR~" + to_base64_and_pickled(data), False
+        return "DIRR~" + to_base64_and_pickled(data), True
     except FileNotFoundError as e:
         return f"{GLOBAL_ERROR_CODE}~5~" + "Invalid Directory Try again", True
     except PermissionError as e:
-        return PREMMISION_DENIED_ERR
+        return PREMMISION_DENIED_ERR, True
     # f"{GLOBAL_ERROR_CODE}~7~Premision Denied", True
 
 

@@ -67,6 +67,7 @@ def menu() -> Tuple[str, List[str], List[str]]:
         "6": [[1, ["Program name / path to the .exe "]], [0, []]],
         "7": [[2, ["File to copy", "New file name to copy to"]], [0, []]],
         "8": [[1, ["File name to delete"]], [0, []]],
+        "9": [[0, ""], [1, ["What Name To grant the screenshot?(end it with .png)"]]],
         "10": [[1, ["Remote file name"]], [1, ["local file name"]]],
         # "11": [[2, ["Username? ", " Password?"]], [0, []]],
         # "12": [[2, ["Username? ", " Password?"]], [0, []]],
@@ -77,6 +78,8 @@ def menu() -> Tuple[str, List[str], List[str]]:
     for i, req_row in enumerate(row):
         for j in range(req_row[0]):
             (server_args if i == 0 else client_args).append(input(req_row[1][j] + " "))
+    if request == "9" and not client_args[0].endswith(".png"):
+        client_args[0] = client_args[0] + ".png"
     return request, server_args, client_args
 
 

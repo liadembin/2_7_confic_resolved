@@ -1,3 +1,4 @@
+from client_handlers import *
 import base64
 import pickle
 import zlib
@@ -7,6 +8,7 @@ from PIL import Image
 from alive_progress import alive_bar
 
 # SCREEN_SHOT_OUTPUT_DIR = "srcshot"
+TCP_DEBUG_FLAG = True
 FILE_MENU_LOCATION = "10"
 ZIPED_FILE_MENU_LOCATION = "11"
 GET_CHUNK_CONST = "1001"
@@ -45,13 +47,14 @@ def decode_from_pickle_and_from_base64(base):
 
 
 def handle_file(fields, client_args):
-    code, chunk_amount, file_name = fields
+    chunk_amount, file_name = fields
     with alive_bar(int(chunk_amount), bar="blocks", spinner="wait") as bar:
         for i in range(int(chunk_amount)):
             # print(f"Chunk: {i}")
 
             # req_str = ("CHUK~" + file_name).encode()
-            req_str = join_code_params("CHUK", file_name)  # protocol_build_request()
+            # protocol_build_request()
+            req_str = join_code_params("CHUK", file_name)
             handle_msg(to_send=req_str, client_args=client_args)
             bar()
         # print("Finished writing the chunk")
@@ -72,7 +75,7 @@ def decompress_file(input_file, output_file):
 
 
 def handle_recived_zipped_file(fields, client_args):
-    code, chunk_amount, compress_file_name = fields
+    chunk_amount, compress_file_name = fields
     output_filename = client_args[0]
     client_args[0] = client_args[0] + ".gz"
     send_str = join_code_params("FILE", compress_file_name)
@@ -115,25 +118,24 @@ def get_tree_structure(file_structure):
 
 
 def handle_dir(fileds, client_args):
-    all = fileds[1]  # 0 is the code
+    all = fileds[0]  # 0 is the code
     decoded = decode_from_pickle_and_from_base64(all)
     return "\n Dirs: " + get_tree_structure(decoded)
 
 
 def handle_exec(fileds, client_args):
-    code, ret_code, stdin, sterr = fileds
-    return f"""return code: {ret_code} \n
-                stdout: {stdin} \n
-                stderr: {sterr}
+    ret_code, stdin, sterr = fileds
+    return f"""return code: {ret_code} \n stdout: {stdin} \n stderr: {sterr}
             """
 
 
 def handle_recived_chunk(fields, client_args):
     # print("writing to: ")
     # print(client_args)
-    code, remote_file_name, b64content = fields
+    remote_file_name, b64content = fields
     decoded_to_bin = base64.b64decode(b64content)
     # out_filename = input("enter the filename to save here ")
+
     with open(client_args[0], "ab+") as f:
         f.write(decoded_to_bin)
     return ""
@@ -153,7 +155,7 @@ def handle_reply(reply, client_args):
 
 
 def handle_screenshot(fields, client_args):
-    out_name = input("What name to give the screenshot? ")
+    out_name = client_args[0]  # input("What name to give the screenshot? ")
     remote_filename = fields[-1]  # f"./{SCREEN_SHOT_OUTPUT_DIR}/" + fields[-1]
     send_str = join_code_params(
         USER_MENU_TO_CODE_DICT[FILE_MENU_LOCATION], remote_filename
@@ -164,8 +166,8 @@ def handle_screenshot(fields, client_args):
     return ""  # f"Server took a screenshot named {fields[-1]} successfully"
 
 
-from client_custom_exceptions import DisconnectRequest
-from client_handlers import *
+def handle_err(fields, client_args):
+    return f"Server returned error_code: {fields[0]}, description: {fields[1]}"
 
 
 def protocol_parse_reply(reply, client_args):
@@ -178,7 +180,7 @@ def protocol_parse_reply(reply, client_args):
         reply = reply.decode()
         fields = []
         if "~" in reply:
-            fields = reply.split("~")
+            fields = reply.split("~")[1:]
 
         code = reply[:4]
         if code == "EXTR":
@@ -190,6 +192,7 @@ def protocol_parse_reply(reply, client_args):
             "FILR": handle_file,
             "CHUR": handle_recived_chunk,
             "ZFIR": handle_recived_zipped_file,
+            "ERRR": handle_err
             # "REGR": handle_register_response,
             # "SIGR": handle_signin_response,
             # "GETM": handle_get_unread,
@@ -202,7 +205,7 @@ def protocol_parse_reply(reply, client_args):
             "TIMR": "The Server time is: ",
             "RNDR": "Server draw the number: ",
             "WHOR": "Server name is: ",
-            "ERRR": "Server returned an error: ",
+            # "ERRR": "Server returned an error: ",
             "EXTR": "Server Acknowleged the exit message ",
             "EXER": "Server Execution returrned: ",
             "SCTE": "Server screen shot err:",
@@ -211,8 +214,8 @@ def protocol_parse_reply(reply, client_args):
             "DELR": "Server delete result: ",
         }
 
-        to_show = to_show_dict.get(code, "Server sent an unknown code")
-        for filed in fields[1:]:
+        to_show = to_show_dict.get(code, "Server sent an unknown code " + code)
+        for filed in fields:
             to_show += filed
     except DisconnectRequest as e:
         raise e
@@ -259,8 +262,8 @@ def handle_msg(sock=None, to_send="", client_args=[]):
     )  # first time, its called from main. it is provided a socket and will save it
     # second time or when called from handlers it will returned the saved socket
 
-    send_with_size(soc, to_send)
-    byte_data = recv_by_size(soc, "", False)
+    send_with_size(soc, to_send, TCP_DEBUG=TCP_DEBUG_FLAG)
+    byte_data = recv_by_size(soc, "", TCP_DEBUG_FLAG)
     if byte_data == b"":
         print("Seems server disconnected abnormal")
         raise DisconnectRequest("Server dissconnected ")

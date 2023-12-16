@@ -1,10 +1,10 @@
 from typing import Literal
 import logging
 
-logging.basicConfig(format="%(asctime)s - %(message)s",
+logging.basicConfig(format="%(asctime)s ",
                     datefmt="%d-%b-%y %H:%M:%S")
 logger = logging.getLogger()
-logger.setLevel(logging.INFO)
+# logger.setLevel(logging.INFO)
 # logger.addHandler(logging.StreamHandler())
 # logger.propagate = True
 

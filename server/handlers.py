@@ -12,13 +12,18 @@ from PIL import Image
 import pickle
 import base64
 from logger import log
-from consts import SCREEN_SHOT_OUTPUT_DIR,SEND_SIZE
+from consts import SCREEN_SHOT_OUTPUT_DIR, SEND_SIZE
 
 HANDLE_TYPE = Tuple[(str | bytearray), Optional[bool]] | str
+GLOBAL_ERROR_CODE = "ERRR"
+
+FILE_NOT_FOUND_ERR = "ERRR~100~File not found"
+PREMMISION_DENIED_ERR = "ERRR~200~Premmision denied"
+UNKNOWN_ERR = "ERRR~300~Unkown Error"
 
 
 def handle_error(args: str) -> HANDLE_TYPE:
-    return "ERRR~002~code not supported", True
+    return f"{GLOBAL_ERROR_CODE}~002~code not supported", True
 
 
 def handle_time(args: str) -> HANDLE_TYPE:
@@ -30,7 +35,10 @@ def handle_random(args: str) -> HANDLE_TYPE:
 
 
 def handle_who(args: str) -> HANDLE_TYPE:
-    return "WHOR~" + os.environ["COMPUTERNAME"], True
+    try:
+        return "WHOR~" + os.environ["COMPUTERNAME"], True
+    except Exception as e:
+        return f"{GLOBAL_ERROR_CODE}~2~Couldnt Retrive my name", True
 
 
 def handle_exit(args: str) -> HANDLE_TYPE:
@@ -40,11 +48,19 @@ def handle_exit(args: str) -> HANDLE_TYPE:
 def handle_exec(args: str) -> HANDLE_TYPE:
     try:
         args_str = args.replace("~", "").replace("'", "")
-        #print("Args for subprocces: ", args_str)
+        # print("Args for subprocces: ", args_str)
+        log(f"Running: {args_str}", logging.INFO)
         res = subprocess.run(args_str, capture_output=True, text=True)
         return "EXER~" + str(res.returncode) + "~" + res.stdout + "~" + res.stderr, True
     except subprocess.CalledProcessError as e:
-        return f"Error during execution: {e}", True
+        return f"{GLOBAL_ERROR_CODE}~3~Error during execution: {e}", True
+    except FileNotFoundError as e:
+        return f"{GLOBAL_ERROR_CODE}~4~No such executable in local dir or path.", True
+    except Exception as e:
+        log(f"Unkonwn Execution errror", logging.ERROR)
+        log(traceback.format_exception(e), logging.ERROR)
+        # return f"{GLOBAL_ERROR_CODE}~5~Unknown Error Executing", True
+        return UNKNOWN_ERR + " While Executing", True
 
 
 def traverse(path="."):
@@ -71,16 +87,22 @@ def to_base64_and_pickled(bytearr):
 
         return base64_data
     except Exception as e:
-        #print(f"Error: {e}")
-        log(f"Error Depickling: {e}, {traceback.format_exception(e)}",logging.ERROR)
+        # print(f"Error: {e}")
+        log(f"Error Depickling: {e}, {traceback.format_exception(e)}", logging.ERROR)
         raise e
         return None
 
 
 def handle_dir(args: str) -> HANDLE_TYPE:
     # params = args.split("~")[1:]
-    data = traverse(args)  # params[0])
-    return "DIRR~" + to_base64_and_pickled(data), False
+    try:
+        data = traverse(args)  # params[0])
+        return "DIRR~" + to_base64_and_pickled(data), False
+    except FileNotFoundError as e:
+        return f"{GLOBAL_ERROR_CODE}~6~" + "Invalid Directory Try again", True
+    except PermissionError as e:
+        return PREMMISION_DENIED_ERR
+    # f"{GLOBAL_ERROR_CODE}~7~Premision Denied", True
 
 
 def handle_del(args: str) -> HANDLE_TYPE:
@@ -88,21 +110,37 @@ def handle_del(args: str) -> HANDLE_TYPE:
         os.remove(args)
         return f"DELR~File '{args}' successfully deleted.", True
     except FileNotFoundError:
-        return f"DELE~0010~Error: File '{args}' not found.", True
+        return FILE_NOT_FOUND_ERR, True
+    # f"{GLOBAL_ERROR_CODE}~8~Error: File '{args}' not found.", True
     except PermissionError:
-        return f"DELE~0011: Permission denied. Unable to delete file '{args}'.", True
+        # f"{GLOBAL_ERROR_CODE}~9: Permission denied. Unable to delete file '{args}'.", True
+        return PREMMISION_DENIED_ERR, True
     except Exception as e:
         return (
-            f"DELE~0012: An unexpected error occurred during file deletion: {e}",
+            UNKNOWN_ERR + f" while deleting file: {e}",
+            # f"{GLOBAL_ERROR_CODE}~10: An unexpected error occurred during file deletion: {e}",
             True,
         )
+
 
 def handle_copy(args: str) -> HANDLE_TYPE:
     args_stringifyed = args
     src, dest = args_stringifyed.split("~")
-    shutil.copyfile(src, dest)
-    return "COPR~copy was succsessfull", True
+    try:
+        shutil.copyfile(src, dest)
+        return "COPR~copy was succsessfull", True
     # pass
+    except PermissionError:
+        return PREMMISION_DENIED_ERR, True
+        # return f"{GLOBAL_ERROR_CODE}~11~Premmision denied", True
+    except FileNotFoundError:
+        return FILE_NOT_FOUND_ERR, True
+        # return f"{GLOBAL_ERROR_CODE}~12~File not found", True
+    except Exception as e:
+        log("Unkown Copy err", logging.ERROR)
+        log(traceback.format_exception(e), logging.ERROR)
+        return UNKNOWN_ERR, True
+        # f"{GLOBAL_ERROR_CODE}~13~Unkown copy error", True
 
 
 def handle_screenshot(args: str, thread) -> HANDLE_TYPE:
@@ -117,8 +155,8 @@ def handle_screenshot(args: str, thread) -> HANDLE_TYPE:
         pyautogui.screenshot(save_loc)
         return "SCTR~" + save_loc, True
     except Exception as e:
-        log("Tid: " + str(thread.tid) + traceback.format_exc(),logging.ERROR)
-        return "SCTE~0100~" + "Cant save the screenshot", True
+        log("Tid: " + str(thread.tid) + traceback.format_exc(), logging.ERROR)
+        return f"{GLOBAL_ERROR_CODE}~14~Cant save the screenshot", True
 
 
 def get_file_size(file_path: str) -> int:
@@ -126,7 +164,7 @@ def get_file_size(file_path: str) -> int:
         size = os.path.getsize(file_path)
         return size
     except FileNotFoundError:
-        return -1  # Or any other value indicating that the file was not found
+        return -1
 
 
 def handle_file(args: str, thread) -> HANDLE_TYPE:
@@ -138,12 +176,29 @@ def handle_file(args: str, thread) -> HANDLE_TYPE:
 
     file_name = args
     chunk_amount = get_chunk_amount(file_name)
-    thread.open_files[file_name] = open(file_name, "rb")
-    return "FILR~" + str(chunk_amount) + "~" + file_name, True
+    if chunk_amount == -1:
+        return (
+            f"{GLOBAL_ERROR_CODE}~12~No such file, Couldnt calculate its chunk length"
+        )
+    try:
+        thread.open_files[file_name] = open(file_name, "rb")
+
+        return "FILR~" + str(chunk_amount) + "~" + file_name, True
+    except PermissionError:
+        return PREMMISION_DENIED_ERR, True
+        # return f"{GLOBAL_ERROR_CODE}~13~dont have premmision to open the file", True
+    except FileNotFoundError:
+        return FILE_NOT_FOUND_ERR, True
+        # return f"{GLOBAL_ERROR_CODE}~14~couldnt locate the file", True
+    except Exception:
+        return UNKNOWN_ERR, True
+        # return f"{GLOBAL_ERROR_CODE}~15~Unknown error calculating chunks", True
 
 
 def get_chunk_amount(file_name):
     file_size = get_file_size(file_name)
+    if file_size == -1:
+        return -1
     chunk_amount = file_size // SEND_SIZE + 1
     if file_size % SEND_SIZE == 0 and file_size > SEND_SIZE:
         chunk_amount -= 1  # no partial is needed
@@ -160,24 +215,54 @@ def zlib_compress_file(input_filename, output_filename):
 
 def handle_get_zipped_file(args: str, thread) -> HANDLE_TYPE:
     compres_name = args + ".gz"
-    zlib_compress_file(args, compres_name)
-    thread.open_files[compres_name] = open(compres_name, "rb")
-    return f"ZFIR~{get_chunk_amount(compres_name)}~{compres_name}", True
+    try:
+        zlib_compress_file(args, compres_name)
+    except Exception as e:
+        return f"{GLOBAL_ERROR_CODE}~16~couldnt compress the file"
+    try:
+        thread.open_files[compres_name] = open(compres_name, "rb")
+    except FileNotFoundError:
+        # f"{GLOBAL_ERROR_CODE}~17~File not found", True
+        return FILE_NOT_FOUND_ERR, True
+    except PermissionError:
+        # f"{GLOBAL_ERROR_CODE}~18~premission denied", True
+        return PREMMISION_DENIED_ERR, True
+    amount = get_chunk_amount(compres_name)
+    if amount == -1:
+        return f"{GLOBAL_ERROR_CODE}~19~couldnt calculate chunk amount", True
+    return f"ZFIR~{amount}~{compres_name}", True
 
 
 def handle_chuk(args: str, thread):
-    file_handle = thread.open_files[args]
-    bin_data = file_handle.read(SEND_SIZE)
+    try:
+        file_handle = thread.open_files[args]
+        bin_data = file_handle.read(SEND_SIZE)
 
-    # Convert binary data to base64-encoded string
-    bin_data_b64 = base64.b64encode(bin_data).decode("utf-8")
+        # Convert binary data to base64-encoded string
+        bin_data_b64 = base64.b64encode(bin_data).decode("utf-8")
 
-    return "CHUR~" + args + "~" + bin_data_b64, True
+        return f"CHUR~{args}~{bin_data_b64}", True
+
+    except KeyError:
+        # Handle the case when 'args' is not present in the open_files dictionary
+        # f"{GLOBAL_ERROR_CODE}~20~File not found: {args}", False
+        return FILE_NOT_FOUND_ERR, True
+
+    except IOError as e:
+        # Handle file reading errors
+        return f"{GLOBAL_ERROR_CODE}~21~Failed to read file {args}: {e}", True
+
+    except Exception as e:
+        # Handle any other unexpected errors
+        return UNKNOWN_ERR, True
 
 
 def handle_close_file(args: str, thread):
-    thread.open_files[args].close()
-    del thread.open_files[args]
+    try:
+        thread.open_files[args].close()
+        del thread.open_files[args]
+    except KeyError:
+        return "ERR~23~No such open file", True
+    except Exception:
+        return UNKNOWN_ERR, True
     return "OKAY", True
-
-

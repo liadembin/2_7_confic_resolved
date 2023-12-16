@@ -6,6 +6,7 @@ import socket
 from custom_thread import CustomThread
 from dotenv import load_dotenv
 from logger import log
+
 IP, PORT = ("127.0.0.1", 7777)
 
 
@@ -31,7 +32,7 @@ def main():
 
     tid = 1
     while True:
-        log("\nMain thread: before accepting ...",logging.INFO)
+        log("\nMain thread: before accepting ...", logging.INFO)
         cli_sock, addr = srv_sock.accept()
 
         # t = CustomThread(cli_sock, client, addr, tid, True)
@@ -39,11 +40,11 @@ def main():
         t.start()
         tid += 1
         break  # for testing, i use just one client for basic tests
-    log("Main thread: waiting to all clints to die",logging.INFO)
+    log("Main thread: waiting to all clints to die", logging.INFO)
     for t in threads:
         t.join()
     srv_sock.close()
-    log("Bye ..",logging.INFO)
+    log("Bye ..", logging.INFO)
 
 
 if __name__ == "__main__":

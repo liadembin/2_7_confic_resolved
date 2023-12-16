@@ -142,8 +142,7 @@ class CustomThread(threading.Thread):
             response = handler(request[5:].decode())  # 5 not 4 because of ~
 
         if (
-            not (type(response) == tuple or type(
-                response) == list) or response[1]
+            not (type(response) == tuple or type(response) == list) or response[1]
         ):  # to allow not returning True to not serialize
             res = response[0]
             return res.encode()

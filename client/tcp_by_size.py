@@ -27,9 +27,7 @@ def recv_by_size(sock, tid="", TCP_DEBUG=False):
             data += _d
 
     if (TCP_DEBUG and size_header != b"") and (tid == "" or tid == -1):
-        print_msg = (
-            f"{tid + ' - ' if tid else ''} Recived({size_header}) >>> {data[:min(LEN_TO_PRINT, len(data))]}"
-        )
+        print_msg = f"{tid + ' - ' if tid else ''} Recived({size_header}) >>> {data[:min(LEN_TO_PRINT, len(data))]}"
         log(print_msg, PRINT_SEVERITY)
     elif TCP_DEBUG and size_header != b"":
         print_msg = f" Recived({size_header}) >>> {data[:min(LEN_TO_PRINT, len(data))]}"

@@ -147,11 +147,13 @@ def handle_reply(reply, client_args):
     return: void
     """
     to_show = protocol_parse_reply(reply, client_args)
-
+    LINE_LENGTH = 130
+    amount = LINE_LENGTH  # min(len(to_show)*2 + 1, LINE_LENGTH)
     if to_show != "":
-        print("\n==========================================================")
-        print(f"\t {to_show} \t")
-        print("==========================================================")
+        print(f"\n{'=' * amount}")
+        spaces = " " * ((amount - len(to_show)) // 2)
+        print(f"{spaces}{to_show} \t")
+        print(f"{'=' * amount}")
 
 
 def handle_screenshot(fields, client_args):

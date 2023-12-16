@@ -26,10 +26,8 @@ def recv_by_size(sock, tid="", TCP_DEBUG=False):
                 break
             data += _d
 
-    if (TCP_DEBUG and size_header != b"") and (tid == "" or tid == -1):
-        print_msg = (
-            f" {tid} - Recived({size_header}) >>> {data[:min(LEN_TO_PRINT,len(data))]}"
-        )
+    if (TCP_DEBUG and size_header != b"") and not (tid == "" or tid == -1):
+        print_msg = f"tid: {tid} - Recived({size_header}) >>> {data[:min(LEN_TO_PRINT,len(data))]}"
         # logger.info(
         #
         # )
@@ -56,12 +54,12 @@ def send_with_size(sock, bdata, tid="", TCP_DEBUG=False):
 
     if tid != "" or tid == -1:
         print_msg = (
-            f" tid: {tid} -  Sent({len_data})>>> {bytea[:min(len(bytea),LEN_TO_PRINT)]}"
+            f"tid: {tid} - Sent({len_data})>>> {bytea[:min(len(bytea),LEN_TO_PRINT)]}"
         )
         log(print_msg, PRINT_SEVERITY)
         # logger.info(
 
         # )
     else:
-        print_msg = f"  Sent({len_data})>>> {bytea[:min(len(bytea),LEN_TO_PRINT)]}"
+        print_msg = f"Sent({len_data})>>> {bytea[:min(len(bytea),LEN_TO_PRINT)]}"
         log(print_msg, PRINT_SEVERITY)

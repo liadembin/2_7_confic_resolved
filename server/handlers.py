@@ -12,18 +12,11 @@ from PIL import Image
 import pickle
 import base64
 from logger import log
-from consts import SCREEN_SHOT_OUTPUT_DIR, SEND_SIZE
-
-HANDLE_TYPE = Tuple[(str | bytearray), Optional[bool]] | str
-GLOBAL_ERROR_CODE = "ERRR"
-
-FILE_NOT_FOUND_ERR = "ERRR~100~File not found"
-PREMMISION_DENIED_ERR = "ERRR~200~Premmision denied"
-UNKNOWN_ERR = "ERRR~300~Unkown Error"
+from consts import *
 
 
 def handle_error(args: str) -> HANDLE_TYPE:
-    return f"{GLOBAL_ERROR_CODE}~002~code not supported", True
+    return f"{GLOBAL_ERROR_CODE}~001~code not supported", True
 
 
 def handle_time(args: str) -> HANDLE_TYPE:
@@ -42,7 +35,7 @@ def handle_who(args: str) -> HANDLE_TYPE:
 
 
 def handle_exit(args: str) -> HANDLE_TYPE:
-    return "EXTR", True
+    return "EXIR", True
 
 
 def handle_exec(args: str) -> HANDLE_TYPE:
@@ -96,10 +89,10 @@ def to_base64_and_pickled(bytearr):
 def handle_dir(args: str) -> HANDLE_TYPE:
     # params = args.split("~")[1:]
     try:
-        data = traverse(args)  # params[0])
+        data = traverse("." if args == "" else args)  # params[0])
         return "DIRR~" + to_base64_and_pickled(data), False
     except FileNotFoundError as e:
-        return f"{GLOBAL_ERROR_CODE}~6~" + "Invalid Directory Try again", True
+        return f"{GLOBAL_ERROR_CODE}~5~" + "Invalid Directory Try again", True
     except PermissionError as e:
         return PREMMISION_DENIED_ERR
     # f"{GLOBAL_ERROR_CODE}~7~Premision Denied", True
@@ -136,6 +129,8 @@ def handle_copy(args: str) -> HANDLE_TYPE:
     except FileNotFoundError:
         return FILE_NOT_FOUND_ERR, True
         # return f"{GLOBAL_ERROR_CODE}~12~File not found", True
+    except shutil.SameFileError:
+        return f"{GLOBAL_ERROR_CODE}~6~Cant copy from the same file to itself. ", True
     except Exception as e:
         log("Unkown Copy err", logging.ERROR)
         log(traceback.format_exception(e), logging.ERROR)
@@ -156,7 +151,7 @@ def handle_screenshot(args: str, thread) -> HANDLE_TYPE:
         return "SCTR~" + save_loc, True
     except Exception as e:
         log("Tid: " + str(thread.tid) + traceback.format_exc(), logging.ERROR)
-        return f"{GLOBAL_ERROR_CODE}~14~Cant save the screenshot", True
+        return f"{GLOBAL_ERROR_CODE}~7~Cant save the screenshot", True
 
 
 def get_file_size(file_path: str) -> int:
@@ -177,9 +172,7 @@ def handle_file(args: str, thread) -> HANDLE_TYPE:
     file_name = args
     chunk_amount = get_chunk_amount(file_name)
     if chunk_amount == -1:
-        return (
-            f"{GLOBAL_ERROR_CODE}~12~No such file, Couldnt calculate its chunk length"
-        )
+        return f"{GLOBAL_ERROR_CODE}~8~No such file, Couldnt calculate its chunk length"
     try:
         thread.open_files[file_name] = open(file_name, "rb")
 
@@ -217,19 +210,24 @@ def handle_get_zipped_file(args: str, thread) -> HANDLE_TYPE:
     compres_name = args + ".gz"
     try:
         zlib_compress_file(args, compres_name)
-    except Exception as e:
-        return f"{GLOBAL_ERROR_CODE}~16~couldnt compress the file"
-    try:
         thread.open_files[compres_name] = open(compres_name, "rb")
+
     except FileNotFoundError:
+        # log("File not found to compress", logging.ERROR)
         # f"{GLOBAL_ERROR_CODE}~17~File not found", True
         return FILE_NOT_FOUND_ERR, True
     except PermissionError:
+        # print("Premmision denied")
         # f"{GLOBAL_ERROR_CODE}~18~premission denied", True
         return PREMMISION_DENIED_ERR, True
+    except Exception as e:
+        # print("Global Error Code")
+        # print(e)
+        return f"{GLOBAL_ERROR_CODE}~9~couldnt compress the file", True
     amount = get_chunk_amount(compres_name)
     if amount == -1:
-        return f"{GLOBAL_ERROR_CODE}~19~couldnt calculate chunk amount", True
+        print("Couldnt Calculate chunks")
+        return f"{GLOBAL_ERROR_CODE}~8~No such file, Couldnt calculate its chunk length", True
     return f"ZFIR~{amount}~{compres_name}", True
 
 
@@ -250,7 +248,7 @@ def handle_chuk(args: str, thread):
 
     except IOError as e:
         # Handle file reading errors
-        return f"{GLOBAL_ERROR_CODE}~21~Failed to read file {args}: {e}", True
+        return f"{GLOBAL_ERROR_CODE}~10~failed to read file {args}", True
 
     except Exception as e:
         # Handle any other unexpected errors
@@ -262,7 +260,7 @@ def handle_close_file(args: str, thread):
         thread.open_files[args].close()
         del thread.open_files[args]
     except KeyError:
-        return "ERR~23~No such open file", True
+        return "ERR~11~no such open file", True
     except Exception:
         return UNKNOWN_ERR, True
     return "OKAY", True

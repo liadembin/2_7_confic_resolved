@@ -23,8 +23,9 @@ from handlers import (
     handle_file,
     handle_screenshot,
 )
+from consts import *
 import os
-from consts import SCREEN_SHOT_OUTPUT_DIR
+# from consts import SCREEN_SHOT_OUTPUT_DIR
 import zlib
 
 
@@ -59,8 +60,8 @@ class CustomThread(threading.Thread):
                 return to_send, True
         except Exception:
             # print(traceback.format_exc())
-            log(traceback.format_exc(), "error")
-            to_send = b"ERRR~001~General error"
+            log(traceback.format_exc(), logging.ERROR)
+            to_send = UNKNOWN_ERR
         return to_send, False
 
     def run(self):
@@ -116,7 +117,7 @@ class CustomThread(threading.Thread):
             "WHOU": handle_who,
             "EXIT": handle_exit,
             "EXEC": handle_exec,
-            "DIRR": handle_dir,
+            "DIRE": handle_dir,
             "DELL": handle_del,
             "COPY": handle_copy,
             "SCRS": handle_screenshot,
@@ -142,8 +143,9 @@ class CustomThread(threading.Thread):
             response = handler(request[5:].decode())  # 5 not 4 because of ~
 
         if (
-            not (type(response) == tuple or type(response) == list) or response[1]
+            not (type(response) == tuple or type(
+                response) == list) or response[1]
         ):  # to allow not returning True to not serialize
             res = response[0]
             return res.encode()
-        return response[0]
+        return response

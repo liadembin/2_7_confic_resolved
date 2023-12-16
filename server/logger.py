@@ -1,9 +1,10 @@
-from typing import Literal
+from typing import Any, Literal
 import logging
 
-logging.basicConfig(format="%(asctime)s - %(message)s", datefmt="%d-%b-%y %H:%M:%S")
+logging.basicConfig(format="%(asctime)s - %(message)s",
+                    datefmt="%d-%b-%y %H:%M:%S")
 logger = logging.getLogger()
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.DEBUG)
 # logger.addHandler(logging.StreamHandler())
 # logger.propagate = True
 
@@ -27,7 +28,12 @@ log_type = (
 )
 
 
-def log(message, level=logging.INFO):
+def log(message: Any, level=logging.INFO):
+    """
+        Input: Something to log, what level to log it at 
+        output:Logs the message
+
+    """
     global logger
 
     # Apply color to the log message

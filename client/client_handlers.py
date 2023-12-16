@@ -8,7 +8,7 @@ from PIL import Image
 from alive_progress import alive_bar
 
 # SCREEN_SHOT_OUTPUT_DIR = "srcshot"
-TCP_DEBUG_FLAG = True
+TCP_DEBUG_FLAG = False
 FILE_MENU_LOCATION = "10"
 ZIPED_FILE_MENU_LOCATION = "11"
 GET_CHUNK_CONST = "1001"
@@ -19,7 +19,7 @@ USER_MENU_TO_CODE_DICT = {
     "2": "RAND",
     "3": "WHOU",
     "4": "EXIT",
-    "5": "DIRR",
+    "5": "DIRE",
     "6": "EXEC",
     "7": "COPY",
     "8": "DELL",
@@ -185,7 +185,7 @@ def protocol_parse_reply(reply, client_args):
             fields = reply.split("~")[1:]
 
         code = reply[:4]
-        if code == "EXTR":
+        if code == "EXIR":
             raise DisconnectRequest("disconnect request")
         special_handlers = {
             "DIRR": handle_dir,

@@ -39,7 +39,7 @@ def main():
         t = CustomThread(cli_sock, addr, tid, True)
         t.start()
         tid += 1
-        break  # for testing, i use just one client for basic tests
+        # break  # for testing, i use just one client for basic tests
     log("Main thread: waiting to all clints to die", logging.INFO)
     for t in threads:
         t.join()
